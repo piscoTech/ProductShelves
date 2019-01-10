@@ -1,6 +1,8 @@
 import cv2 as cv
 import numpy as np
 import sys
+from functools import reduce
+from math import sqrt
 
 def showImage(title, image, scale=1):
 	image = cv.resize(image, (int(image.shape[1]*scale), int(image.shape[0]*scale)))
@@ -26,11 +28,12 @@ SCENES_COUNT = 5
 SCENES_EXT = 'png'
 PRODUCTS = [0, 27, 1, 19, 24, 25, 26]
 
-MIN_MATCH_COUNT = 37
+MIN_MATCH_COUNT = 36
 FLANN_INDEX_KDTREE = 1
 LOWE_RATIO_THRESHOLD = 0.44
 MATCH_COLOR = (0,0,255)
 KP_COLOR = (0,255,0)
+MATCHED_WITH_PREVIOUS_THRESHOLD = 10
 
 print("Loading %d models..." % len(PRODUCTS))
 sift = cv.xfeatures2d.SIFT_create()
@@ -49,10 +52,10 @@ for scnId in range(1, SCENES_COUNT + 1):
 		sys.exit()
 
 	kpT, desT = sift.detectAndCompute(target, None)
-	usedKp = []
+	foundCenters = []
 	showImage("Scene %d" % scnId, drawKeypoints(target, kpT))
 
-	for p, kpM, desM, mShape in models:
+	for pId, kpM, desM, mShape in models:
 		cv.waitKey()
 		
 		matches = flann.knnMatch(desM, desT, 2)
@@ -60,7 +63,6 @@ for scnId in range(1, SCENES_COUNT + 1):
 		good = [m for m, n in matches if m.distance < LOWE_RATIO_THRESHOLD * n.distance]
 
 		if len(good) >= MIN_MATCH_COUNT:
-			print("Product %d found (%d matches, %.2f%%)" % (p, len(good), (len(good)*100)/float(len(kpM))))
 			# Find homography
 			src_pts = np.float32([kpM[m.queryIdx].pt for m in good]).reshape(-1,1,2)
 			dst_pts = np.float32([kpT[m.trainIdx].pt for m in good]).reshape(-1,1,2)
@@ -70,16 +72,31 @@ for scnId in range(1, SCENES_COUNT + 1):
 			h,w,d = mShape
 			pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
 			dst = cv.perspectiveTransform(pts,M)
-			target = cv.polylines(target, [np.int32(dst)], True, MATCH_COLOR, 2, cv.LINE_AA)
+			
+			corners = [(c[0][0],c[0][1]) for c in dst]
+			barycenter = reduce(lambda c1, c2: (c1[0]+c2[0], c1[1]+c2[1]), corners)
+			barycenter = (barycenter[0]/4, barycenter[1]/4)
 
-			# Filter used keypoints
-			matchedKp = [m.trainIdx for m in good]
-			usedKp = [kpT[m] for m in matchedKp]
-			kpT = [kp for i,kp in enumerate(kpT) if i not in matchedKp]
-			desT = np.array([d for i,d in enumerate(desT) if i not in matchedKp])
-			showImage("Scene %d" % scnId, drawKeypoints(target, kpT, usedKp))
+			if True in [sqrt((barycenter[0] - b1[0])**2 + (barycenter[1] - b1[1])**2) <= MATCHED_WITH_PREVIOUS_THRESHOLD for b1 in foundCenters]:
+				print("Product %d not found (%d matches): ignored as position is a previously detected product" % (pId, len(good)))
+			else:
+				target = cv.polylines(target, [np.int32(dst)], True, MATCH_COLOR, 2, cv.LINE_AA)
+
+				foundCenters += [barycenter]
+				width = (corners[3][0] + corners[2][0] - corners[1][0] - corners[0][0]) / 2
+				height = (corners[2][1] + corners[1][1] - corners[0][1] - corners[3][1]) / 2
+
+				print("Product %d found (%d matches, %.2f%%)" % (pId, len(good), (len(good)*100)/float(len(kpM))))
+				print("\tPosition (%d,%d), Width %dpx, Height %dpx" % (barycenter[0], barycenter[1], width, height))
+
+				# Filter used keypoints
+				matchedKp = [m.trainIdx for m in good]
+				usedKp = [kpT[m] for m in matchedKp]
+				kpT = [kp for i,kp in enumerate(kpT) if i not in matchedKp]
+				desT = np.array([d for i,d in enumerate(desT) if i not in matchedKp])
+				showImage("Scene %d" % scnId, drawKeypoints(target, kpT, usedKp))
 		else:
-			print("Product %d not found (%d matches)" % (p, len(good)))
+			print("Product %d not found (%d matches)" % (pId, len(good)))
 	
 	if scnId < SCENES_COUNT:
 		print("Press any key to move to the next scene...")
