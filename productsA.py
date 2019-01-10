@@ -26,9 +26,9 @@ SCENES_COUNT = 5
 SCENES_EXT = 'png'
 PRODUCTS = [0, 27, 1, 19, 24, 25, 26]
 
-MIN_MATCH_COUNT = 35
+MIN_MATCH_COUNT = 37
 FLANN_INDEX_KDTREE = 1
-LOWE_RATIO_THRESHOLD = 0.43
+LOWE_RATIO_THRESHOLD = 0.44
 MATCH_COLOR = (0,0,255)
 KP_COLOR = (0,255,0)
 
@@ -59,8 +59,8 @@ for scnId in range(1, SCENES_COUNT + 1):
 		# Store all the good matches as per Lowe's ratio test.
 		good = [m for m, n in matches if m.distance < LOWE_RATIO_THRESHOLD * n.distance]
 
-		if len(good) > MIN_MATCH_COUNT:
-			print("Product %d found (%d matches)" % (p, len(good)))
+		if len(good) >= MIN_MATCH_COUNT:
+			print("Product %d found (%d matches, %.2f%%)" % (p, len(good), (len(good)*100)/float(len(kpM))))
 			# Find homography
 			src_pts = np.float32([kpM[m.queryIdx].pt for m in good]).reshape(-1,1,2)
 			dst_pts = np.float32([kpT[m.trainIdx].pt for m in good]).reshape(-1,1,2)
@@ -74,7 +74,7 @@ for scnId in range(1, SCENES_COUNT + 1):
 
 			# Filter used keypoints
 			matchedKp = [m.trainIdx for m in good]
-			usedKp += [kpT[m] for m in matchedKp]
+			usedKp = [kpT[m] for m in matchedKp]
 			kpT = [kp for i,kp in enumerate(kpT) if i not in matchedKp]
 			desT = np.array([d for i,d in enumerate(desT) if i not in matchedKp])
 			showImage("Scene %d" % scnId, drawKeypoints(target, kpT, usedKp))
@@ -82,7 +82,7 @@ for scnId in range(1, SCENES_COUNT + 1):
 			print("Product %d not found (%d matches)" % (p, len(good)))
 	
 	if scnId < SCENES_COUNT:
-		print("Press any key to move to the next scene (auto advancing in 10s)...")
+		print("Press any key to move to the next scene...")
 	else:
 		print("Press any key to exit...")
 	
