@@ -3,6 +3,7 @@ import numpy as np
 import sys
 from functools import reduce
 from math import sqrt
+import clustering as cl
 
 def showImage(title, image, scale=1):
 	image = cv.resize(image, (int(image.shape[1]*scale), int(image.shape[0]*scale)))
@@ -38,7 +39,7 @@ def naiveNSMThresh(img, threshold, size = 1):
 SCENES_CODE = "m"
 SCENES_COUNT = 1
 SCENES_EXT = 'png'
-PRODUCTS = [26] #[0, 1, 11, 19, 24, 26, 25]
+PRODUCTS = [0, 1, 11, 19, 24, 26, 25]
 
 MIN_MATCH_COUNT = 36
 FLANN_INDEX_KDTREE = 1
@@ -123,10 +124,11 @@ for scnId in range(1, SCENES_COUNT + 1):
 			else:
 				aaMatches[hp] = [match]
 
-		print(np.max(aa))
-		aa = naiveNSMThresh(aa, 4, size=2)
+		aa = naiveNSMThresh(aa, 3, size=2)
 		showImage("AA", aa)
 		cv.imwrite("aa.png", aa)
+		voteClusters = cl.naiveClustering(aa, 55)
+		print("%d instance(s)" % len(voteClusters))
 	
 	if scnId < SCENES_COUNT:
 		print("Press any key to move to the next scene...")
