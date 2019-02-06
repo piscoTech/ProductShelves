@@ -128,7 +128,39 @@ for scnId in range(1, SCENES_COUNT + 1):
 		showImage("AA", aa)
 		cv.imwrite("aa.png", aa)
 		voteClusters = cl.naiveClustering(aa, 55)
-		print("%d instance(s)" % len(voteClusters))
+		if len(voteClusters) == 0:
+			print("Product %d not found" % pId)
+		else:
+			print("Product %d found, %d instance(s)" % (pId, len(voteClusters)))
+			for instance in voteClusters:
+				instanceMatches = []
+				for pt in instance:
+					instanceMatches += aaMatches[pt]
+
+				# Find homography
+				src_pts = np.float32([kpM[m.queryIdx].pt for m in instanceMatches]).reshape(-1,1,2)
+				dst_pts = np.float32([kpT[m.trainIdx].pt for m in instanceMatches]).reshape(-1,1,2)
+				M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
+
+				if M == None:
+					print("\tCannot determine position for this instance, impossible to find an homography")
+				else:
+					# Draw model bounding box in target
+					h,w,d = mShape
+					pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+					dst = cv.perspectiveTransform(pts,M)
+					
+					corners = [(c[0][0],c[0][1]) for c in dst]
+					barycenter = reduce(lambda c1, c2: (c1[0]+c2[0], c1[1]+c2[1]), corners)
+					barycenter = (barycenter[0]/4, barycenter[1]/4)
+					target = cv.polylines(target, [np.int32(dst)], True, MATCH_COLOR, 2, cv.LINE_AA)
+
+					width = (corners[3][0] + corners[2][0] - corners[1][0] - corners[0][0]) / 2
+					height = (corners[2][1] + corners[1][1] - corners[0][1] - corners[3][1]) / 2
+
+					print("\tPosition (%d,%d), Width %dpx, Height %dpx" % (barycenter[0], barycenter[1], width, height))
+			
+			showImage("Scene %d" % scnId, target)
 	
 	if scnId < SCENES_COUNT:
 		print("Press any key to move to the next scene...")
