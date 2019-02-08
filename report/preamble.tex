@@ -1,0 +1,107 @@
+%!TEX TS-program = xelatex
+%!TEX encoding = UTF-8 Unicode
+\documentclass[a4paper, 11pt, headings=standardclasses]{scrartcl}
+\usepackage{xifthen}
+
+\usepackage[no-math]{fontspec}
+\usepackage{titlesec}
+\usepackage{titling}
+\usepackage{noindentafter}
+
+\usepackage{tocstyle}
+\usetocstyle{standard}
+\makeatletter
+\renewcommand{\autodot}{}% Remove all end-of-counter dots
+\makeatother
+
+\usepackage[english,italian]{babel}
+\usepackage[top=2.25cm, bottom=1cm, includefoot, left=1.5cm, right=1.5cm, footskip=1cm]{geometry}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage{enumitem}
+\usepackage[bottom]{footmisc}
+\usepackage{float}
+\usepackage{subfig}
+\usepackage{wrapfig}
+\usepackage[font=small,labelfont={bf,small}]{caption}
+\setcapindent{0em}
+
+\usepackage{color}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{mathtools}
+\usepackage{esint}
+\usepackage[makeroom]{cancel}
+
+\usepackage{eurosym}
+\usepackage{pifont}
+
+% Hypenation fix for XeLaTeX
+\lccode"2019="0027
+% General appearance
+\def\baseURL{https://github.com/piscoTech/}
+\newcommand{\makeheading}[1]{
+	{
+		\centering
+		{\Huge\bfseries\thetitle\par}
+		
+		\vspace{.7cm}
+		
+		\theauthor\\[1ex]
+		\thedate\\[1ex]
+		\href{\baseURL #1}{\ttfamily{\baseURL}#1}\par
+		
+		\vspace{.5cm}
+	}
+}
+
+\defaultfontfeatures{Scale=MatchLowercase}
+
+\setmainfont{CMU Serif}
+\setsansfont{CMU Sans Serif}
+\setmonofont{CMU Typewriter Text}
+
+\newcommand{\listspace}{-0.2em}
+\setitemize{itemsep=\listspace}
+\setenumerate{itemsep=\listspace}
+\setlist[enumerate, 2]{label=\alph*.}
+
+\newcommand{\€}{\text{\euro}}
+\newcommand{\∂}{\partial}
+\newcommand{\∞}{\infty}
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+\let\oldneg\neg
+\renewcommand{\neg}{{\sim}}
+
+\newcommand*{\N}{\mathbb{N}}
+\newcommand*{\Z}{\mathbb{Z}}
+\newcommand*{\Q}{\mathbb{Q}}
+\newcommand*{\R}{\mathbb{R}}
+\newcommand*{\CC}{\mathbb{C}}
+\renewcommand*{\P}{\mathbb{P}}
+
+\newenvironment{scases}{\begin{cases}}{\end{cases}}
+\AfterEndEnvironment{scases}{\mkern-18mu}%Subtract the spacing of \quad used with two columns
+\newenvironment{bdmatrix}{\begin{bmatrix}}{\end{bmatrix}}
+\newenvironment{pdmatrix}{\begin{pmatrix}}{\end{pmatrix}}
+\AtBeginEnvironment{bdmatrix}{\everymath{\displaystyle}}
+\AtBeginEnvironment{pdmatrix}{\everymath{\displaystyle}}
+
+%Referencing, exercizes, examples and questions
+\newcommand{\equationname}{\iflanguage{italian}{Equazione}{Equation}}
+
+\renewcommand{\eqref}[1]{\equationname~\ref{#1}}
+\newcommand{\figref}[1]{\figurename~\ref{#1}}
+\newcommand{\prtref}[1]{§~\ref{#1}}
+
+\newcommand{\ie}{i.e.\ }
+\newcommand{\eg}{e.g.\ }
+\newcommand{\aka}{a.k.a.\ }
+
+\AtBeginEnvironment{quote}{\itshape}

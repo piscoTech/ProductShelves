@@ -1,0 +1,23 @@
+\input{preamble.tex}
+
+\title{Product Recognition on Store Shelves}
+\date{A.Y. 2018--2019}
+\author{Marco Boschi -- 0000829970}
+
+\begin{document}
+\selectlanguage{english}
+
+\makeheading{ProductShelves}
+
+\section{Multiple Objects Single Instance Detection}
+The first task is to detect a single instance of multiple objects in each of the proposed scenes, which can be done using just local invariant feature detector and then matching the key-points of the scene with those of the different models to be found.
+
+The chosen detector is SIFT paired with a Flann based matcher using KD-trees, as provided by OpenCV.
+As the models are the same for multiple scenes their key-points are learned a single time at startup to speed up the program, also the image itself is not useful, just the key-points and respective descriptors are needed alongside the product number and dimensions of the model.
+
+For each scene the key-points are computed and then are matched with those of each model and the found matches are filtered using Lowe's ratio test to keep only the good ones and if enough are found the matched key-points are used to compute an homography from the model to the scene.
+The homography allows to find the center of the product and its corners, which are used to highlight the product in the scene and also compute width and height of the box as the average length of the two corresponding sides.
+
+
+
+\end{document}

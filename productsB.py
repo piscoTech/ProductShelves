@@ -37,17 +37,20 @@ def naiveNSMThresh(img, threshold, size = 1):
 	return out
 
 SCENES_CODE = "m"
-SCENES_COUNT = 1
+SCENES_COUNT = 5
 SCENES_EXT = 'png'
 PRODUCTS = [0, 1, 11, 19, 24, 26, 25]
 
-MIN_MATCH_COUNT = 36
+MIN_MATCH_COUNT = 18
+MIN_MATCH_COUNT_SECONDARY = 15
 FLANN_INDEX_KDTREE = 1
-LOWE_RATIO_THRESHOLD = 0.8
+LOWE_RATIO_THRESHOLD = 0.4
 MATCH_COLOR = (0,0,255)
 KP_COLOR = (0,255,0)
-MATCHED_WITH_PREVIOUS_THRESHOLD = 10
-AA_QUANTIZATION_STEP = 5
+AA_QUANTIZATION_STEP = 7
+AA_THRESHOLD = 1
+AA_NMS_SIZE = 2
+AA_CLUSTERING_DISTANCE = 25
 
 print("Loading %d models..." % len(PRODUCTS))
 sift = cv.xfeatures2d.SIFT_create()
@@ -124,26 +127,26 @@ for scnId in range(1, SCENES_COUNT + 1):
 			else:
 				aaMatches[hp] = [match]
 
-		aa = naiveNSMThresh(aa, 3, size=2)
+		aa = naiveNSMThresh(aa, AA_THRESHOLD, size=AA_NMS_SIZE)
 		showImage("AA", aa)
-		cv.imwrite("aa.png", aa)
-		voteClusters = cl.naiveClustering(aa, 55)
-		if len(voteClusters) == 0:
-			print("Product %d not found" % pId)
-		else:
-			print("Product %d found, %d instance(s)" % (pId, len(voteClusters)))
-			for instance in voteClusters:
-				instanceMatches = []
-				for pt in instance:
-					instanceMatches += aaMatches[pt]
+		voteClusters = cl.naiveClustering(aa, AA_CLUSTERING_DISTANCE)
+		instances = []
+		for instance in voteClusters:
+			instanceMatches = []
+			for pt in instance:
+				instanceMatches += aaMatches[pt]
 
-				# Find homography
-				src_pts = np.float32([kpM[m.queryIdx].pt for m in instanceMatches]).reshape(-1,1,2)
-				dst_pts = np.float32([kpT[m.trainIdx].pt for m in instanceMatches]).reshape(-1,1,2)
+			if len(instanceMatches) < MIN_MATCH_COUNT:
+				continue
+
+			# Find homography(s)
+			src_pts = np.float32([kpM[m.queryIdx].pt for m in instanceMatches]).reshape(-1,1,2)
+			dst_pts = np.float32([kpT[m.trainIdx].pt for m in instanceMatches]).reshape(-1,1,2)
+			while True:
 				M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
-
+				
 				if M == None:
-					print("\tCannot determine position for this instance, impossible to find an homography")
+					break
 				else:
 					# Draw model bounding box in target
 					h,w,d = mShape
@@ -158,7 +161,20 @@ for scnId in range(1, SCENES_COUNT + 1):
 					width = (corners[3][0] + corners[2][0] - corners[1][0] - corners[0][0]) / 2
 					height = (corners[2][1] + corners[1][1] - corners[0][1] - corners[3][1]) / 2
 
-					print("\tPosition (%d,%d), Width %dpx, Height %dpx" % (barycenter[0], barycenter[1], width, height))
+					instances.append((barycenter[0], barycenter[1], width, height, len(src_pts)))
+
+					src_pts = np.float32([pt for i, pt in enumerate(src_pts) if not mask[i][0]])
+					dst_pts = np.float32([pt for i, pt in enumerate(dst_pts) if not mask[i][0]])
+
+					if len(src_pts) < MIN_MATCH_COUNT_SECONDARY:
+						break
+
+		if len(instances) == 0:
+			print("Product %d not found" % pId)
+		else:
+			print("Product %d found, %d instance(s)" % (pId, len(instances)))
+			for inst in instances:
+				print("\tPosition (%d,%d), Width %dpx, Height %dpx, Matches %d" % inst)
 			
 			showImage("Scene %d" % scnId, target)
 	
